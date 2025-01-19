@@ -11,7 +11,7 @@ pipeline{
         stage("Code Build"){
             steps{
                 echo "Building the image"
-                bat 'docker-compose build'
+                sh 'docker-compose build'
             }
         }
         stage("Push to DockerHub"){
