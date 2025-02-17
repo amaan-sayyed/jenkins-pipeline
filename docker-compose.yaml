@@ -1,6 +1,6 @@
 services:
   backend:
-    build: ./mern/backend
+    image: amaan72211/mern-backend:latest
     ports:
       - "5050:5050" 
     networks:
@@ -11,10 +11,10 @@ services:
       - mongodb
 
   frontend:
-    build: ./mern/frontend
     ports:
-      - "5173:5173"  
-    networks:
+      - "5173:5173"
+    image: amaan72211/mern-frontend:latest  
+    networks: 
       - mern_network
     environment:
       REACT_APP_API_URL: http://backend:5050 
@@ -34,5 +34,4 @@ networks:
 
 volumes:
   mongo-data:
-    driver: local  # Persist MongoDB data locally
-
+    driver: local
