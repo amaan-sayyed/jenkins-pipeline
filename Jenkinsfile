@@ -2,25 +2,37 @@ pipeline {
     agent any
 
     stages {
-        stage("Code clone") {
+        stage("Build Backend Image") {
             steps {
-                echo "Cloning the code"
-                git url: "https://github.com/amaan-sayyed/jenkins-pipeline.git", branch: 'main'
+                echo "Building the backend image"
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "DOCKER_HUB_PASS", usernameVariable: "DOCKER_HUB_USER")]) {
+                    sh 'docker build -t ${DOCKER_HUB_USER}/mern-backend:latest -f backend/Dockerfile .'
+                }
             }
         }
-        stage("Code Build") {
+        stage("Build Frontend Image") {
             steps {
-                echo "Building the image"
-                sh 'docker-compose --verbose build'
+                echo "Building the frontend image"
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "DOCKER_HUB_PASS", usernameVariable: "DOCKER_HUB_USER")]) {
+                    sh 'docker build -t ${DOCKER_HUB_USER}/mern-frontend:latest -f frontend/Dockerfile .'
+                }
             }
         }
-        stage("Push to DockerHub") {
+        stage("Push Backend Image to DockerHub") {
             steps {
-                echo "Pushing the image to Docker Hub"
-                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "dockerHubPass", usernameVariable: "dockerHubUser")]) {
-                    sh "docker tag mern-test_frontend ${env.dockerHubUser}/mern-cicd:latest"
-                    sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
-                    sh "docker push ${env.dockerHubUser}/mern-cicd:latest"
+                echo "Pushing the backend image to Docker Hub"
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "DOCKER_HUB_PASS", usernameVariable: "DOCKER_HUB_USER")]) {
+                    sh 'docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASS}'
+                    sh 'docker push ${DOCKER_HUB_USER}/mern-backend:latest'
+                }
+            }
+        }
+        stage("Push Frontend Image to DockerHub") {
+            steps {
+                echo "Pushing the frontend image to Docker Hub"
+                withCredentials([usernamePassword(credentialsId: "dockerHub", passwordVariable: "DOCKER_HUB_PASS", usernameVariable: "DOCKER_HUB_USER")]) {
+                    sh 'docker login -u ${DOCKER_HUB_USER} -p ${DOCKER_HUB_PASS}'
+                    sh 'docker push ${DOCKER_HUB_USER}/mern-frontend:latest'
                 }
             }
         }
@@ -29,6 +41,7 @@ pipeline {
                 echo "Deploying to EC2"
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     sh """
+                        ssh-keyscan -H 54.157.194.36 >> ~/.ssh/known_hosts
                         scp -i $SSH_KEY docker-compose.yaml ec2-user@54.157.194.36:/home/ec2-user/
                         scp -i $SSH_KEY startup-script.sh ec2-user@54.157.194.36:/home/ec2-user/
                         ssh -i $SSH_KEY ec2-user@54.157.194.36 'bash /home/ec2-user/startup-script.sh'
