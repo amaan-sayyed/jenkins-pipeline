@@ -27,7 +27,7 @@ pipeline {
         stage("Deploy") {
             steps {
                 echo "Deploying the container"
-                sh "docker-compose up amaan72211/mern-cicd:latest"
+                sh "docker-compose up -d"
             }
         }
     }
